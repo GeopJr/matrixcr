@@ -1,6 +1,5 @@
-require "json"
 require "uri"
-require "http/client"
+require "./api"
 
 module Matrix
   class Client
