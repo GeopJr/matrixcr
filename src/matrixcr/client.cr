@@ -15,9 +15,9 @@ module Matrix
       if @access_token.nil?
         body = {"type" => "m.login.password", "user" => "#{@user}", "password" => "#{@password}"}
         response = @client.post("/_matrix/client/r0/login", headers: HTTP::Headers{"User-Agent" => "matrixcr v#{Matrix::VERSION}"}, body: body.to_json)
-        value = JSON.parse(response.body)
-        raise ArgumentError.new(value["error"].to_s) if value["error"]?
-        @access_token = value["access_token"].to_s
+        json_body = JSON.parse(response.body)
+        raise ArgumentError.new(json_body["error"].to_s) if json_body["error"]?
+        @access_token = json_body["access_token"].to_s
       end
     end
 

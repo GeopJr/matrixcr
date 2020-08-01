@@ -1,6 +1,6 @@
 require "json"
 require "http/client"
-require "./mappings/*"
+require "./mappings/api"
 
 module Matrix
   module API
