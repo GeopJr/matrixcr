@@ -1,4 +1,5 @@
 require "uri"
+require "./mappings/client"
 require "./api"
 
 module Matrix
@@ -29,11 +30,47 @@ module Matrix
       return JSON.parse(response.body)
     end
 
+    macro call_event(name, payload)
+      @on_{{name}}_handlers.try &.each do |handler|
+        begin
+          handler.call({{payload}})
+        rescue ex
+          puts ex
+        end
+      end
+    end
+
+    macro event(name, payload_type)
+      def on_{{name}}(&handler : {{payload_type}} ->)
+        (@on_{{name}}_handlers ||= [] of {{payload_type}} ->) << handler
+      end
+    end
+
+    def identify_event(payload : JSON::Any)
+      hash = payload["rooms"]["join"].as_h
+      room = hash.first_key
+      event = hash[room]["ephemeral"]["events"][0]["type"]
+      case event
+      when "m.typing"
+        json = %({"room": "#{room.to_s}", "user_ids": #{hash[room]["ephemeral"]["events"][0]["content"]["user_ids"].as_a}})
+        call_event typing, Typing.from_json(json)
+      else
+        puts event
+      end
+    end
+
+    event typing, Typing
+
     def run(@next_batch : String | Nil = nil)
       @alive = true
+      @first = true
       while @alive
         begin
           response = sync(30000, @next_batch)
+          next @first = false if @first
+          identify_event(response)
+
+          raise response["error"].to_s if response["error"]?
           @next_batch = response["next_batch"].to_s if response["next_batch"]?
         rescue ex
           # TODO: Add some sort of error log
